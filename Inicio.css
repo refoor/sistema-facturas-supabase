@@ -1,0 +1,83 @@
+body {
+    font-family: Century Gothic;
+    background-color: #d9d9d9;
+    margin: 0;
+    background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.5)),url(imgs/imgmty.jpg);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    min-height: 100vh;
+}
+.color {
+    background-color: #00283f;
+    display: flex;
+    justify-content: center;
+}
+ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    height: 100px;
+    align-items: center;
+}
+
+li {
+    margin: 0;
+}
+a {
+    display: block;
+    color: white;
+    text-decoration: none;
+}
+.logo {
+    height: 80px;
+    margin: 0;
+}
+.sesion{
+    color: white;
+    padding: 20px;
+    width: auto;
+    height: 500px;
+    text-align: center;
+}
+.comenzar{
+    margin: 0 auto;
+    color: black;
+    width: 25%;
+    padding: 10px;
+    background-color: white;
+    border-radius: 15px;
+}
+input[type="text"]{
+    padding: 10px;
+    width: 250px;
+    border: 1px solid #979797;
+    border-radius: 5px;
+}
+.iniciar{
+    font-family: Century Gothic;
+    font-size: 14px;
+    border-style: none;
+    border-radius: 100px;
+    text-align: center;
+    color: white;
+    background-color: #9966ff;
+    height: 40px;
+    width: 200px;
+    margin-bottom: 15px;
+    transition: background-color 1s ease;
+}
+.iniciar:hover {
+  background-color: #bf73d4;
+}
+.filtros {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.filtros input, .filtros select {
+  padding: 5px;
+  border-radius: 5px;
+}

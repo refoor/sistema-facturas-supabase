@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="Factura.css" />
+    <title>Facturas</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+  <body>
+    <nav class="color">
+      <ul>
+        <li><a href="Inicio.html">Regresar</a></li>
+      </ul>
+    </nav>
+    <br />
+    <div class="contenedor">
+      <scroll-container>
+        <div class="seccion1">
+          <table id="tablaFacturas">
+            <thead>
+              <tr>
+                <th col-index="1">Fecha de cotización</th>
+                <th col-index="2">Número de cotización</th>
+                <th col-index="3">Concepto de cotización</th>
+                <th col-index="4">
+                  Empresa
+                  <select class="table-filter" onchange="filter_rows()">
+                    <option value="all"></option>
+                  </select>
+                </th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </scroll-container>
+
+      <div class="btnagregar">
+        <div id="modal" class="modal">
+          <div class="modal-contenido">
+            <h3>Nuevo Registro</h3>
+
+            <div id="paso1" class="paso">
+              <table>
+                <tr>
+                  <th colspan="2">Datos de Cotización</th>
+                </tr>
+                <tr>
+                  <td>
+                    <label style="color: rgb(99, 99, 99);">Fecha de cotización: </label>
+                    <input type="date" id="fecha" /><br /><br />
+                    <input type="text" id="orden" class="campo" placeholder="Número de cotización" /><br /><br />
+                    <input type="text" id="concepto" class="campo" placeholder="Concepto de cotización" /><br /><br />
+                    <input type="text" id="empresa" class="campo" placeholder="Empresa" /><br /><br /><br /><br /><br />
+                  </td>
+                  <td class="borde">
+                    <label for="imagenInput" class="btnSubir">
+                      <div id="previewTexto">+</div>
+                      <img id="previewModalImg" src="" alt="Vista previa" style="display:none; width:100%; height:100%; object-fit:contain;" />
+                      <iframe id="previewModalPdf" style="display:none; width:100%; height:100%; border:none; background:white;"></iframe>
+                    </label>
+                    <input type="file" id="imagenInput" accept="image/*,application/pdf" hidden />
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <br />
+
+            <div class="cambios">
+              <button onclick="siguientePaso()" class="btnmodal">GUARDAR</button>
+              <button onclick="cerrarModal()" class="btnmodal">CANCELAR</button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="numorden">
+            <p>No. Orden</p>
+            <p id="numeroOrden"></p>
+          </div>
+          <div class="seccion2" id="contenedorPreviewGrande">
+            <img class="imagenPrueba" src="imgs/factura.png" alt="" style="width:100%; height:100%; object-fit:contain;" />
+            <iframe id="pdfPreviewGrande" style="display:none; width:100%; height:100%; border:none; background:white;"></iframe>
+          </div>
+          <br />
+          <div class="botones">
+            <button class="boton" onclick="verDetalles()">DETALLES</button>
+            <button class="boton2" onclick="eliminarFila()">ELIMINAR</button>
+            <button class="boton3" onclick="abrirModal()">CREAR</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="visorImagen" class="visor">
+      <div class="visor-contenido">
+        <span class="cerrar" onclick="cerrarVisor()">✖</span>
+        <img id="imagenZoom" src="" />
+        <button onclick="verDetalles()" class="btnDetalles">Ver detalles</button>
+      </div>
+    </div>
+
+    <div id="visorPDF" class="visor">
+      <div class="visor-contenido" style="width: 90%; height: 90%;">
+        <span class="cerrar" onclick="cerrarPDF()">✖</span>
+        <iframe id="pdfViewer" style="width: 100%; height: 100%; border: none; background: white;"></iframe>
+        <button onclick="verDetalles()" class="btnDetalles">Ver detalles</button>
+      </div>
+    </div>
+
+<script>
+  const SUPABASE_URL = "AQUI VA LA BASE DE DATOS";
+  const SUPABASE_ANON_KEY = "AQUI VA LA CLAVE ANONIMA";
+  const BUCKET = "documentos";
+
+  if (!window.supabase) {
+    alert("No se cargó la librería de Supabase");
+    throw new Error("window.supabase no está disponible");
+  }
+
+  const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
+    {
+      auth: {
+        persistSession: false
+      }
+    }
+  );
+
+  let filaSeleccionada = null;
+  let archivoTemp = null;
+  let registroSeleccionado = null;
+  let registrosCache = [];
+
+  window.onload = async function () {
+    try {
+      await cargarTabla();
+      await getUniqueValuesFromColumn();
+    } catch (error) {
+      console.error("Error al iniciar:", error);
+      alert("Error al cargar la página: " + (error.message || ""));
+    }
+  };
+
+  function abrirModal() {
+    limpiarFormulario();
+    document.getElementById("modal").style.display = "flex";
+  }
+
+  function cerrarModal() {
+    document.getElementById("modal").style.display = "none";
+  }
+  function mostrarPreviewModal(src, tipoArchivo) {
+  const texto = document.getElementById("previewTexto");
+  const img = document.getElementById("previewModalImg");
+  const pdf = document.getElementById("previewModalPdf");
+
+  texto.style.display = "none";
+  img.style.display = "none";
+  pdf.style.display = "none";
+
+  if (!src) {
+    texto.style.display = "block";
+    return;
+  }
+
+  if (tipoArchivo === "application/pdf" || src.startsWith("data:application/pdf")) {
+    pdf.src = src;
+    pdf.style.display = "block";
+  } else {
+    img.src = src;
+    img.style.display = "block";
+  }
+}
+
+document.getElementById("imagenInput").addEventListener("change", function (e) {
+  const archivo = e.target.files[0];
+  if (!archivo) return;
+
+  archivoTemp = archivo;
+
+  const lector = new FileReader();
+  lector.onload = function (evento) {
+    mostrarPreviewModal(evento.target.result, archivo.type);
+  };
+  lector.readAsDataURL(archivo);
+});
+
+  function limpiarFormulario() {
+  document.getElementById("fecha").value = "";
+  document.getElementById("orden").value = "";
+  document.getElementById("concepto").value = "";
+  document.getElementById("empresa").value = "";
+  document.getElementById("imagenInput").value = "";
+
+  document.getElementById("previewTexto").style.display = "block";
+
+  document.getElementById("previewModalImg").src = "";
+  document.getElementById("previewModalImg").style.display = "none";
+
+  document.getElementById("previewModalPdf").src = "";
+  document.getElementById("previewModalPdf").style.display = "none";
+
+  archivoTemp = null;
+}
+
+  function nombreSeguro(nombre) {
+    return nombre
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9._-]/g, "_");
+  }
+
+  async function subirArchivo(file, carpeta, idRegistro) {
+    if (!file) return "";
+
+    const ruta = `${carpeta}/${idRegistro}_${Date.now()}_${nombreSeguro(file.name || "archivo")}`;
+
+    const { error: uploadError } = await supabaseClient.storage
+      .from(BUCKET)
+      .upload(ruta, file, { upsert: true });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabaseClient.storage.from(BUCKET).getPublicUrl(ruta);
+    return data.publicUrl;
+  }
+
+  async function siguientePaso() {
+    const fecha = document.getElementById("fecha").value;
+    const orden = document.getElementById("orden").value.trim();
+    const concepto = document.getElementById("concepto").value.trim();
+    const empresa = document.getElementById("empresa").value.trim();
+
+    if (!fecha || !orden || !concepto || !empresa) {
+      alert("Completa todos los campos");
+      return;
+    }
+
+    try {
+      const id = Date.now();
+      let cotizacionArchivo = "";
+
+      if (archivoTemp) {
+        cotizacionArchivo = await subirArchivo(archivoTemp, "cotizaciones", id);
+      }
+
+      const { error } = await supabaseClient.from("facturas").insert([
+        {
+          id: id,
+          numero_cotizacion: orden,
+          fecha_cotizacion: fecha,
+          concepto: concepto,
+          empresa: empresa,
+          orden_numero: "",
+          orden_fecha: null,
+          orden_recibida: false,
+          factura_numero: "",
+          factura_fecha: null,
+          factura_pagada: false,
+          cotizacion_archivo: cotizacionArchivo,
+          orden_archivo: "",
+          factura_archivo: ""
+        }
+      ]);
+
+      if (error) throw error;
+
+      await cargarTabla();
+      await getUniqueValuesFromColumn();
+      cerrarModal();
+      limpiarFormulario();
+      alert("Registro guardado correctamente");
+    } catch (error) {
+      console.error("Error real:", error);
+      alert("No se pudo guardar: " + (error.message || ""));
+    }
+  }
+
+  async function cargarTabla() {
+    const tabla = document.querySelector("#tablaFacturas tbody");
+    tabla.innerHTML = "";
+
+    const { data, error } = await supabaseClient
+      .from("facturas")
+      .select("*")
+      .order("id", { ascending: false });
+
+    if (error) {
+      console.error(error);
+      alert("Error al cargar registros: " + (error.message || ""));
+      return;
+    }
+
+    registrosCache = data || [];
+
+    registrosCache.forEach((datos) => {
+      const fila = tabla.insertRow();
+
+      fila.insertCell(0).innerHTML = `<input type="date" value="${datos.fecha_cotizacion || ""}" disabled>`;
+      fila.insertCell(1).textContent = datos.numero_cotizacion || "";
+      fila.insertCell(2).textContent = datos.concepto || "";
+      fila.insertCell(3).textContent = datos.empresa || "";
+
+      fila.dataset.id = datos.id;
+      fila.onclick = () => seleccionarFila(fila);
+    });
+  }
+
+  function esPdf(url) {
+    return /\.pdf($|\?)/i.test(url || "");
+  }
+
+  function mostrarPreviewArchivo(url) {
+  const img = document.querySelector(".imagenPrueba");
+  const pdf = document.getElementById("pdfPreviewGrande");
+
+  if (!img || !pdf) return;
+
+  img.style.display = "block";
+  pdf.style.display = "none";
+
+  if (!url) {
+    img.src = "imgs/factura.png";
+    pdf.src = "";
+    return;
+  }
+
+  if (esPdf(url)) {
+    pdf.src = url;
+    pdf.style.display = "block";
+    img.style.display = "none";
+  } else {
+    img.src = url;
+    img.style.display = "block";
+    pdf.style.display = "none";
+  }
+}
+
+  function seleccionarFila(fila) {
+    document.querySelectorAll("#tablaFacturas tbody tr").forEach((f) => {
+      f.classList.remove("seleccionada");
+    });
+
+    fila.classList.add("seleccionada");
+    filaSeleccionada = fila;
+
+    const id = Number(fila.dataset.id);
+    registroSeleccionado = registrosCache.find((r) => Number(r.id) === id) || null;
+
+    if (!registroSeleccionado) return;
+
+    document.getElementById("numeroOrden").textContent =
+      registroSeleccionado.numero_cotizacion || "";
+
+    mostrarPreviewArchivo(registroSeleccionado.cotizacion_archivo || "");
+  }
+
+  async function eliminarFila() {
+    if (!registroSeleccionado) {
+      alert("Selecciona una fila");
+      return;
+    }
+
+    if (!confirm("¿Eliminar?")) return;
+
+    try {
+      const { error } = await supabaseClient
+        .from("facturas")
+        .delete()
+        .eq("id", registroSeleccionado.id);
+
+      if (error) throw error;
+
+      filaSeleccionada = null;
+      registroSeleccionado = null;
+      document.getElementById("numeroOrden").textContent = "";
+      mostrarPreviewArchivo("");
+
+      await cargarTabla();
+      await getUniqueValuesFromColumn();
+      alert("Registro eliminado");
+    } catch (error) {
+      console.error("Error al eliminar:", error);
+      alert("No se pudo eliminar: " + (error.message || ""));
+    }
+  }
+
+  async function getUniqueValuesFromColumn() {
+    const filtro = document.querySelector(".table-filter");
+    filtro.innerHTML = '<option value="all">Todas</option>';
+
+    const empresas = [...new Set(registrosCache.map((d) => d.empresa).filter(Boolean))].sort();
+
+    empresas.forEach((val) => {
+      const option = document.createElement("option");
+      option.value = val;
+      option.textContent = val;
+      filtro.appendChild(option);
+    });
+  }
+
+  function filter_rows() {
+    const filtro = document.querySelector(".table-filter").value;
+
+    document.querySelectorAll("#tablaFacturas tbody tr").forEach((fila) => {
+      const empresa = fila.cells[3].textContent;
+      fila.style.display = filtro === "all" || empresa === filtro ? "" : "none";
+    });
+  }
+
+  const imagenPrueba = document.querySelector(".imagenPrueba");
+  if (imagenPrueba) {
+    imagenPrueba.addEventListener("click", function () {
+      if (!registroSeleccionado) {
+        alert("Selecciona una fila");
+        return;
+      }
+
+      const archivo = registroSeleccionado.cotizacion_archivo || "";
+      if (!archivo) {
+        alert("Este registro no tiene archivo");
+        return;
+      }
+
+      if (esPdf(archivo)) {
+        document.getElementById("pdfViewer").src = archivo;
+        document.getElementById("visorPDF").style.display = "flex";
+      } else {
+        document.getElementById("imagenZoom").src = archivo;
+        document.getElementById("visorImagen").style.display = "flex";
+      }
+    });
+  }
+
+  function cerrarVisor() {
+    document.getElementById("visorImagen").style.display = "none";
+  }
+
+  function cerrarPDF() {
+    document.getElementById("visorPDF").style.display = "none";
+    document.getElementById("pdfViewer").src = "";
+  }
+
+  function verDetalles() {
+    if (!registroSeleccionado) {
+      alert("Selecciona una fila");
+      return;
+    }
+
+    localStorage.setItem("registroId", String(registroSeleccionado.id));
+    window.location.href = "detalles.html";
+  }
+</script>
+  </body>
+</html>

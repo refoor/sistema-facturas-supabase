@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Detalles</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      font-family: Century Gothic;
+      background-color: #d9d9d9;
+      margin: 0;
+    }
+    .color {
+      background-color: #0e3850;
+    }
+
+    ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      height: 50px;
+      align-items: center;
+    }
+
+    li {
+      margin: 0;
+    }
+
+    a {
+      display: block;
+      padding: 15px 20px;
+      color: white;
+      text-decoration: none;
+    }
+
+    .seccion {
+      background: white;
+      border-radius: 20px;
+      padding: 25px;
+      margin-bottom: 25px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+      margin: 25px;
+    }
+
+    .titulo {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .contenido {
+      display: flex;
+      gap: 30px;
+      align-items: center;
+    }
+
+    .preview-box {
+      width: 220px;
+      height: 280px;
+      border: 2px dashed #8f5cff;
+      border-radius: 15px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      overflow: hidden;
+      background: #faf8ff;
+      position: relative;
+    }
+
+    .preview-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .preview-box.bloqueado {
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
+    .eliminar {
+      position: absolute;
+      top: 5px;
+      right: 8px;
+      background: rgb(255, 0, 0);
+      color: white;
+      border-radius: 50%;
+      font-size: 12px;
+      padding: 3px 6px;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .pdf-preview {
+      text-align: center;
+      font-size: 13px;
+      color: #555;
+    }
+
+    .pdf-preview::before {
+      content: "📄";
+      font-size: 35px;
+      display: block;
+    }
+
+    .info {
+      flex: 1;
+    }
+
+    .input-group {
+      margin-bottom: 12px;
+    }
+
+    .input-group label {
+      font-size: 13px;
+      color: #666;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      box-sizing: border-box;
+    }
+
+    input[disabled] {
+      background: #f0f0f0;
+      color: #777;
+      cursor: not-allowed;
+    }
+
+    .switch {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .switch input {
+      display: none;
+    }
+
+    .slider {
+      width: 40px;
+      height: 20px;
+      background: #ccc;
+      border-radius: 20px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .slider::before {
+      content: "";
+      width: 16px;
+      height: 16px;
+      background: white;
+      border-radius: 50%;
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      transition: 0.3s;
+    }
+
+    input:checked + .slider {
+      background: #8f5cff;
+    }
+
+    input:checked + .slider::before {
+      transform: translateX(20px);
+    }
+
+    #btnEditarFlotante {
+      position: fixed;
+      top: 60px;
+      right: 20px;
+      background: #8f5cff;
+      color: white;
+      z-index: 1000;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+      border-style: none;
+      height: 40px;
+      width: 110px;
+      border-radius: 50px;
+      cursor: pointer;
+    }
+
+    .alerta {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #8f5cff;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 10px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: 0.3s;
+    }
+
+    .alerta.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .visor {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.95);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+    }
+
+    #zoomContainer {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      width: 90%;
+      height: 90%;
+    }
+
+    #imgZoom {
+      max-width: 100%;
+      max-height: 100%;
+      cursor: grab;
+    }
+
+    #pdfViewer {
+      width: 80%;
+      height: 90%;
+      border: none;
+      background: white;
+      border-radius: 10px;
+    }
+
+    .cerrar {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      color: white;
+      font-size: 30px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <nav class="color">
+    <ul>
+      <li><a href="Factura1.html">Regresar</a></li>
+    </ul>
+  </nav>
+
+  <button onclick="toggleEdicion()" id="btnEditarFlotante">EDITAR</button>
+
+  <div id="alertaModo" class="alerta">Modo edición</div>
+
+  <input type="file" id="fileCotizacion" accept="image/*,application/pdf" hidden>
+  <input type="file" id="fileOrden" accept="image/*,application/pdf" hidden>
+  <input type="file" id="fileFactura" accept="image/*,application/pdf" hidden>
+
+  <div class="seccion">
+    <div class="titulo">COTIZACIÓN</div>
+    <div class="contenido">
+      <div class="preview-box" onclick="accionPreview('cotizacion')">
+        <div id="previewCotizacion">+</div>
+        <span class="eliminar" onclick="eliminarArchivo(event,'cotizacion')">✖</span>
+      </div>
+
+      <div class="info">
+        <div class="input-group"><label>Número</label><input id="cotizacionNumero"></div>
+        <div class="input-group"><label>Fecha</label><input id="cotizacionFecha" type="date"></div>
+        <div class="input-group"><label>Concepto</label><input id="cotizacionConcepto"></div>
+        <div class="input-group"><label>Empresa</label><input id="cotizacionEmpresa"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="seccion">
+    <div class="titulo">ORDEN</div>
+    <div class="contenido">
+      <div class="preview-box" onclick="accionPreview('orden')">
+        <div id="previewOrden">+</div>
+        <span class="eliminar" onclick="eliminarArchivo(event,'orden')">✖</span>
+      </div>
+
+      <div class="info">
+        <div class="input-group"><label>Número</label><input id="ordenNumero"></div>
+        <div class="input-group"><label>Fecha</label><input id="ordenFecha" type="date"></div>
+
+        <div class="switch">
+          <span>Recibida</span>
+          <label>
+            <input type="checkbox" id="ordenRecibida">
+            <div class="slider"></div>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="seccion">
+    <div class="titulo">FACTURA</div>
+    <div class="contenido">
+      <div class="preview-box" onclick="accionPreview('factura')">
+        <div id="previewFactura">+</div>
+        <span class="eliminar" onclick="eliminarArchivo(event,'factura')">✖</span>
+      </div>
+
+      <div class="info">
+        <div class="input-group"><label>Número</label><input id="facturaNumero"></div>
+        <div class="input-group"><label>Fecha</label><input id="facturaFecha" type="date"></div>
+
+        <div class="switch">
+          <span>Pagada</span>
+          <label>
+            <input type="checkbox" id="facturaPagada">
+            <div class="slider"></div>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="visor" class="visor" onclick="cerrarVisor(event)">
+    <span class="cerrar">✖</span>
+    <div id="zoomContainer">
+      <img id="imgZoom">
+    </div>
+  </div>
+
+  <div id="visorPDF" class="visor" onclick="cerrarPDF(event)">
+    <span class="cerrar">✖</span>
+    <iframe id="pdfViewer"></iframe>
+  </div>
+
+  <div style="margin-top: 30px; text-align: center;">
+    <button onclick="regresar()" style="
+      padding: 12px 20px;
+      background: #6c757d;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+    ">
+      ← Regresar
+    </button>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://vpzcyaotlyriyolxvanc.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_-UKF_miNl3DCSsnieKt46w__9gtESVS";
+    const BUCKET = "documentos";
+
+    if (!window.supabase) {
+      alert("No se cargó Supabase");
+      throw new Error("Supabase no disponible");
+    }
+
+    const supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY,
+      {
+        auth: {
+          persistSession: false
+        }
+      }
+    );
+
+    const id = Number(localStorage.getItem("registroId"));
+    let modoEdicion = false;
+
+    let archivos = {
+      cotizacion: "",
+      orden: "",
+      factura: ""
+    };
+
+    let archivosNuevos = {
+      cotizacion: null,
+      orden: null,
+      factura: null
+    };
+
+    window.onload = async function () {
+      if (!id) {
+        alert("No se encontró el registro seleccionado");
+        window.location.href = "Factura1.html";
+        return;
+      }
+
+      await cargarDatosSupabase();
+      bloquearCampos();
+      actualizarBoton();
+    };
+
+    async function cargarDatosSupabase() {
+      const { data, error } = await supabaseClient
+        .from("facturas")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error || !data) {
+        console.error(error);
+        alert("No se pudo cargar el registro");
+        return;
+      }
+
+      archivos.cotizacion = data.cotizacion_archivo || "";
+      archivos.orden = data.orden_archivo || "";
+      archivos.factura = data.factura_archivo || "";
+
+      document.getElementById("cotizacionNumero").value = data.numero_cotizacion || "";
+      document.getElementById("cotizacionFecha").value = data.fecha_cotizacion || "";
+      document.getElementById("cotizacionConcepto").value = data.concepto || "";
+      document.getElementById("cotizacionEmpresa").value = data.empresa || "";
+
+      document.getElementById("ordenNumero").value = data.orden_numero || "";
+      document.getElementById("ordenFecha").value = data.orden_fecha || "";
+      document.getElementById("ordenRecibida").checked = data.orden_recibida || false;
+
+      document.getElementById("facturaNumero").value = data.factura_numero || "";
+      document.getElementById("facturaFecha").value = data.factura_fecha || "";
+      document.getElementById("facturaPagada").checked = data.factura_pagada || false;
+
+      mostrarPreview(archivos.cotizacion, "previewCotizacion");
+      mostrarPreview(archivos.orden, "previewOrden");
+      mostrarPreview(archivos.factura, "previewFactura");
+    }
+
+    function bloquearCampos() {
+      document.querySelectorAll("input").forEach((i) => {
+        if (i.type !== "file") i.disabled = true;
+      });
+
+      document.querySelectorAll(".preview-box").forEach((b) => {
+        b.classList.add("bloqueado");
+      });
+    }
+
+    function activarEdicion() {
+      document.querySelectorAll("input").forEach((i) => {
+        if (i.type !== "file") i.disabled = false;
+      });
+
+      document.querySelectorAll(".preview-box").forEach((b) => {
+        b.classList.remove("bloqueado");
+      });
+    }
+
+    function actualizarBoton() {
+      const btn = document.getElementById("btnEditarFlotante");
+      btn.textContent = modoEdicion ? "GUARDAR" : "EDITAR";
+      btn.style.background = modoEdicion ? "#ff4d4d" : "#8f5cff";
+    }
+
+    function mostrarAlerta(texto) {
+      const alerta = document.getElementById("alertaModo");
+      alerta.textContent = texto;
+      alerta.classList.add("show");
+      setTimeout(() => alerta.classList.remove("show"), 2000);
+    }
+
+    function esPdf(url) {
+      return /\.pdf($|\?)/i.test(url || "") || (url || "").startsWith("data:application/pdf");
+    }
+
+    function mostrarPreview(url, idPreview) {
+      const cont = document.getElementById(idPreview);
+
+      if (!url) {
+        cont.innerHTML = "+";
+        return;
+      }
+
+      if (esPdf(url)) {
+        cont.innerHTML = `<div class="pdf-preview">PDF</div>`;
+      } else {
+        cont.innerHTML = `<img src="${url}" alt="preview">`;
+      }
+    }
+
+    function accionPreview(tipo) {
+      const archivo = archivos[tipo];
+
+      if (!modoEdicion) {
+        if (!archivo) return;
+
+        if (esPdf(archivo)) {
+          abrirPDF(archivo);
+        } else {
+          abrirVisor(archivo);
+        }
+        return;
+      }
+
+      if (!archivo) {
+        document.getElementById("file" + capitalizar(tipo)).click();
+        return;
+      }
+
+      if (esPdf(archivo)) {
+        abrirPDF(archivo);
+      } else {
+        abrirVisor(archivo);
+      }
+    }
+
+    function capitalizar(t) {
+      return t.charAt(0).toUpperCase() + t.slice(1);
+    }
+
+    function eliminarArchivo(e, tipo) {
+      e.stopPropagation();
+
+      if (!modoEdicion) return;
+
+      archivos[tipo] = "";
+      archivosNuevos[tipo] = null;
+      mostrarPreview("", "preview" + capitalizar(tipo));
+    }
+
+    const visor = document.getElementById("visor");
+    const imgZoom = document.getElementById("imgZoom");
+
+    function abrirVisor(src) {
+      imgZoom.src = src;
+      visor.style.display = "flex";
+    }
+
+    function cerrarVisor(e) {
+      if (e.target.id === "visor" || e.target.classList.contains("cerrar")) {
+        visor.style.display = "none";
+      }
+    }
+
+    const visorPDF = document.getElementById("visorPDF");
+    const pdfViewer = document.getElementById("pdfViewer");
+
+    function abrirPDF(src) {
+      pdfViewer.src = src;
+      visorPDF.style.display = "flex";
+    }
+
+    function cerrarPDF(e) {
+      if (e.target.id === "visorPDF" || e.target.classList.contains("cerrar")) {
+        visorPDF.style.display = "none";
+        pdfViewer.src = "";
+      }
+    }
+
+    ["Cotizacion", "Orden", "Factura"].forEach((t) => {
+      document.getElementById("file" + t).addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const tipo = t.toLowerCase();
+        archivosNuevos[tipo] = file;
+
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          archivos[tipo] = ev.target.result;
+          mostrarPreview(ev.target.result, "preview" + t);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    function nombreSeguro(nombre) {
+      return nombre
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9._-]/g, "_");
+    }
+
+    async function subirArchivo(file, carpeta, idRegistro) {
+      if (!file) return "";
+
+      const ruta = `${carpeta}/${idRegistro}_${Date.now()}_${nombreSeguro(file.name || "archivo")}`;
+
+      const { error: uploadError } = await supabaseClient.storage
+        .from(BUCKET)
+        .upload(ruta, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabaseClient.storage.from(BUCKET).getPublicUrl(ruta);
+      return data.publicUrl;
+    }
+
+    async function guardarTodo() {
+      try {
+        let cotizacionArchivo = archivos.cotizacion;
+        let ordenArchivo = archivos.orden;
+        let facturaArchivo = archivos.factura;
+
+        if (archivosNuevos.cotizacion) {
+          cotizacionArchivo = await subirArchivo(archivosNuevos.cotizacion, "cotizaciones", id);
+        }
+
+        if (archivosNuevos.orden) {
+          ordenArchivo = await subirArchivo(archivosNuevos.orden, "ordenes", id);
+        }
+
+        if (archivosNuevos.factura) {
+          facturaArchivo = await subirArchivo(archivosNuevos.factura, "facturas", id);
+        }
+
+        const payload = {
+          numero_cotizacion: document.getElementById("cotizacionNumero").value.trim(),
+          fecha_cotizacion: document.getElementById("cotizacionFecha").value || null,
+          concepto: document.getElementById("cotizacionConcepto").value.trim(),
+          empresa: document.getElementById("cotizacionEmpresa").value.trim(),
+
+          orden_numero: document.getElementById("ordenNumero").value.trim(),
+          orden_fecha: document.getElementById("ordenFecha").value || null,
+          orden_recibida: document.getElementById("ordenRecibida").checked,
+
+          factura_numero: document.getElementById("facturaNumero").value.trim(),
+          factura_fecha: document.getElementById("facturaFecha").value || null,
+          factura_pagada: document.getElementById("facturaPagada").checked,
+
+          cotizacion_archivo: cotizacionArchivo || "",
+          orden_archivo: ordenArchivo || "",
+          factura_archivo: facturaArchivo || ""
+        };
+
+        const { error } = await supabaseClient
+          .from("facturas")
+          .update(payload)
+          .eq("id", id);
+
+        if (error) throw error;
+
+        archivos.cotizacion = payload.cotizacion_archivo;
+        archivos.orden = payload.orden_archivo;
+        archivos.factura = payload.factura_archivo;
+
+        archivosNuevos = {
+          cotizacion: null,
+          orden: null,
+          factura: null
+        };
+
+        await cargarDatosSupabase();
+        mostrarAlerta("Cambios guardados");
+      } catch (error) {
+        console.error(error);
+        alert("No se pudieron guardar los cambios: " + (error.message || ""));
+      }
+    }
+
+    async function toggleEdicion() {
+      if (!modoEdicion) {
+        modoEdicion = true;
+        activarEdicion();
+        actualizarBoton();
+        mostrarAlerta("Modo edición activado");
+        return;
+      }
+
+      await guardarTodo();
+      modoEdicion = false;
+      bloquearCampos();
+      actualizarBoton();
+    }
+
+    function regresar() {
+      window.location.href = "Factura1.html";
+    }
+  </script>
+</body>
+</html>

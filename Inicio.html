@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ModuleByte</title>
+    <link rel="stylesheet" href="Inicio.css" />
+  </head>
+  <body>
+    <nav class="color">
+    <ul>
+      <li>
+        <a href="Inicio.html"
+          ><img class="logo" src="imgs/logon.png" alt="logo"
+        /></a>
+      </li>
+    </ul>
+  </nav>
+    <div class="sesion">
+      <br /><br /><br />
+      <h1>¡Bienvenido(a) a ModuleByte!</h1>
+      <br />
+      <div class="comenzar">
+        <h4>Ingresa tu nombre para comenzar</h4>
+        <p><input type="text" placeholder="Nombre" id="usuario" autocomplete="off"/></p>
+        <p><input type="text" placeholder="Contraseña" id="pass" autocomplete="off"/></p>
+        <button class="iniciar" onclick="iniciarSesion()">Inicia sesión</button><br />
+      </div>
+    </div>
+
+    <script>
+  function iniciarSesion() {
+    const usuario = document.getElementById("usuario").value.trim();
+    const pass = document.getElementById("pass").value.trim();
+
+    if (usuario === "" || pass === "") {
+      alert("Por favor, completa todos los campos");
+      return;
+    }
+
+    if (usuario === "admin" && pass === "1234") {
+      window.location.href = "Factura1.html";
+    } else {
+      alert("El usuario o contraseña es incorrecto");
+    }
+  }
+</script>
+  </body>
+</html>
