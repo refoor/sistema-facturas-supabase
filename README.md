@@ -61,20 +61,6 @@ Vista donde se muestra la información completa del registro seleccionado. Está
 
 Cada sección puede incluir datos del documento y archivos relacionados en formato PDF o imagen.
 
-## Estructura general del proyecto
-
-sistema-facturas-supabase/
-│
-├── index.html
-├── Facturas1.html
-├── detalles.html
-├── config.example.js
-├── .gitignore
-├── css/
-├── js/
-├── imgs/
-└── README.md
-
 ## Base de datos
 
 El sistema fue diseñado para trabajar con una tabla principal en Supabase. Los registros almacenan información relacionada con documentos administrativos de la empresa.
